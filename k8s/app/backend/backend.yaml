@@ -1,4 +1,14 @@
 ---
+# Backend ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend-sa
+  namespace: production
+  labels:
+    app: backend
+    tier: api
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -79,10 +89,11 @@ spec:
         - name: backend
           image: node:20-alpine
           command: ["/bin/sh", "-c"]
+          workingDir: /tmp
           args:
             - |
-              mkdir -p /app
-              cat > /app/package.json << 'EOF'
+              mkdir -p /tmp/app
+              cat > /tmp/app/package.json << 'EOF'
               {
                 "name": "production-api",
                 "version": "1.0.0",
@@ -104,11 +115,167 @@ spec:
               }
               EOF
 
-              cat > /app/server.js << 'EOF'
-              // NodeJS server content (unchanged)
+              cat > /tmp/app/server.js << 'EOF'
+              const express = require('express');
+              const { Pool } = require('pg');
+              const redis = require('redis');
+              const cors = require('cors');
+              const helmet = require('helmet');
+              const compression = require('compression');
+              const rateLimit = require('express-rate-limit');
+              const promClient = require('prom-client');
+              const winston = require('winston');
+              
+              const app = express();
+              const port = process.env.PORT || 3000;
+              
+              // Logging
+              const logger = winston.createLogger({
+                level: process.env.LOG_LEVEL || 'info',
+                format: winston.format.json(),
+                transports: [
+                  new winston.transports.Console()
+                ]
+              });
+              
+              // Prometheus metrics
+              const register = promClient.register;
+              const httpRequestDuration = new promClient.Histogram({
+                name: 'http_request_duration_seconds',
+                help: 'Duration of HTTP requests in seconds',
+                labelNames: ['method', 'route', 'status'],
+                buckets: [0.1, 0.5, 1, 2, 5]
+              });
+              
+              // Database connection
+              const pool = new Pool({
+                user: process.env.POSTGRES_USER || 'appuser',
+                host: process.env.POSTGRES_HOST || 'postgres',
+                database: process.env.POSTGRES_DB || 'production_db',
+                password: process.env.POSTGRES_PASSWORD || 'SecureP@ssw0rd2024!',
+                port: process.env.POSTGRES_PORT || 5432,
+              });
+              
+              // Redis connection
+              const redisClient = redis.createClient({
+                host: process.env.REDIS_HOST || 'redis',
+                port: process.env.REDIS_PORT || 6379,
+                password: process.env.REDIS_PASSWORD || 'RedisP@ssw0rd2024!'
+              });
+              
+              redisClient.on('error', (err) => logger.error('Redis error:', err));
+              
+              // Middleware
+              app.use(helmet());
+              app.use(compression());
+              app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+              app.use(express.json());
+              
+              // Rate limiting
+              const limiter = rateLimit({
+                windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+                max: parseInt(process.env.RATE_LIMIT_MAX) || 100
+              });
+              app.use(limiter);
+              
+              // Metrics middleware
+              app.use((req, res, next) => {
+                const start = Date.now();
+                res.on('finish', () => {
+                  const duration = (Date.now() - start) / 1000;
+                  httpRequestDuration.labels(req.method, req.path, res.statusCode).observe(duration);
+                });
+                next();
+              });
+              
+              // Health check endpoints
+              app.get('/health', async (req, res) => {
+                try {
+                  await pool.query('SELECT 1');
+                  await redisClient.ping();
+                  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+                } catch (error) {
+                  res.status(500).json({ status: 'unhealthy', error: error.message });
+                }
+              });
+              
+              app.get('/ready', async (req, res) => {
+                try {
+                  const pgResult = await pool.query('SELECT 1');
+                  const redisResult = await redisClient.ping();
+                  res.json({
+                    status: 'ready',
+                    postgres: pgResult ? 'connected' : 'disconnected',
+                    redis: redisResult,
+                    timestamp: new Date().toISOString()
+                  });
+                } catch (error) {
+                  res.status(500).json({ status: 'not ready', error: error.message });
+                }
+              });
+              
+              // Metrics endpoint
+              app.get('/metrics', async (req, res) => {
+                res.set('Content-Type', register.contentType);
+                res.end(await register.metrics());
+              });
+              
+              // API endpoints
+              app.get('/api/v1/users', async (req, res) => {
+                try {
+                  const result = await pool.query('SELECT id, username, email, is_active, created_at FROM users ORDER BY id');
+                  res.json(result.rows);
+                } catch (error) {
+                  logger.error('Error fetching users:', error);
+                  res.status(500).json({ error: 'Internal server error' });
+                }
+              });
+              
+              app.get('/api/v1/products', async (req, res) => {
+                try {
+                  const result = await pool.query('SELECT * FROM products ORDER BY id');
+                  res.json(result.rows);
+                } catch (error) {
+                  logger.error('Error fetching products:', error);
+                  res.status(500).json({ error: 'Internal server error' });
+                }
+              });
+              
+              app.post('/api/v1/products', async (req, res) => {
+                try {
+                  const { name, description, price, stock_quantity, category } = req.body;
+                  const result = await pool.query(
+                    'INSERT INTO products (name, description, price, stock_quantity, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                    [name, description, price, stock_quantity, category]
+                  );
+                  res.status(201).json(result.rows[0]);
+                } catch (error) {
+                  logger.error('Error creating product:', error);
+                  res.status(500).json({ error: 'Internal server error' });
+                }
+              });
+              
+              app.get('/api/v1/orders', async (req, res) => {
+                try {
+                  const result = await pool.query(`
+                    SELECT o.*, u.username, u.email 
+                    FROM orders o 
+                    JOIN users u ON o.user_id = u.id 
+                    ORDER BY o.created_at DESC
+                  `);
+                  res.json(result.rows);
+                } catch (error) {
+                  logger.error('Error fetching orders:', error);
+                  res.status(500).json({ error: 'Internal server error' });
+                }
+              });
+              
+              app.listen(port, () => {
+                logger.info(`Server running on port ${port}`);
+              });
               EOF
 
-              cd /app && npm install && node server.js
+              cd /tmp/app && npm install && node server.js
           ports:
             - containerPort: 3000
               name: http
@@ -160,9 +327,64 @@ spec:
                 secretKeyRef:
                   name: backend-secrets
                   key: API_KEY
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_DB
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: POSTGRES_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDIS_PASSWORD
           livenessProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: production
+  labels:
+    app: backend
+    tier: api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http
+  selector:
+    app: backend
+    tier: api
