@@ -24,9 +24,9 @@ metadata:
     app: backend
     tier: api
 type: Opaque
-data:
-  JWT_SECRET: "Y2hhbmdlLXRoaXMtdG8tYS1zZWN1cmUtcmFuZG9tLXN0cmluZy1pbi1wcm9kdWN0aW9u"
-  API_KEY: "Y2hhbmdlLXRoaXMtYXBpLWtleS1pbi1wcm9kdWN0aW9u"
+stringData:
+  JWT_SECRET: "R{-c:yyxbsK]|bCGn?ed0mX>+6fvzgwtLT/%2HV|VuEGNvnBIL;hD#OQrjtkr669"
+  API_KEY: "BZL1ymA|xch|6i3{CqBcd$6E7b7n6ChI"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,6 +56,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "3000"
         prometheus.io/path: "/metrics"
+        # No Vault annotations
     spec:
       serviceAccountName: backend-sa
       securityContext:
@@ -111,6 +112,13 @@ spec:
           ports:
             - containerPort: 3000
               name: http
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           env:
             - name: NODE_ENV
               valueFrom:
@@ -131,3 +139,20 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: backend-config
+                  key: CORS_ORIGIN
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: JWT_SECRET
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: API_KEY
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
