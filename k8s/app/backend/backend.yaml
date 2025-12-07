@@ -345,40 +345,22 @@ spec:
                   key: JWT_SECRET
             # PostgreSQL
             - name: POSTGRES_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-credentials
-                  key: POSTGRES_HOST
+              value: "postgres"
             - name: POSTGRES_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-credentials
-                  key: POSTGRES_PORT
+              value: "5432"
             - name: POSTGRES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-credentials
-                  key: POSTGRES_USER
+              value: "your_db_user"
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-credentials
-                  key: POSTGRES_PASSWORD
+              value: "your_db_password"
             - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-credentials
-                  key: POSTGRES_DB
+              value: "your_db_name"
             # Redis
             - name: REDIS_HOST
               value: "redis"
             - name: REDIS_PORT
               value: "6379"
             - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-credentials
-                  key: REDIS_PASSWORD
+              value: "your_redis_password"
           resources:
             requests:
               memory: "256Mi"
