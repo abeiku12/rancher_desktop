@@ -140,6 +140,16 @@ spec:
                 configMapKeyRef:
                   name: backend-config
                   key: CORS_ORIGIN
+            - name: RATE_LIMIT_WINDOW_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: RATE_LIMIT_WINDOW_MS
+            - name: RATE_LIMIT_MAX
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: RATE_LIMIT_MAX
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
