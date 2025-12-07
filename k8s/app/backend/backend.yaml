@@ -26,9 +26,9 @@ metadata:
     app: backend
     tier: api
 type: Opaque
-stringData:
-  JWT_SECRET: "your-super-secure-jwt-secret-key-change-in-production-2024"
-  API_KEY: "api-key-for-external-services-change-me"
+data:
+  JWT_SECRET: "Y2hhbmdlLXRoaXMtdG8tYS1zZWN1cmUtcmFuZG9tLXN0cmluZy1pbi1wcm9kdWN0aW9u"
+  API_KEY: "Y2hhbmdlLXRoaXMtYXBpLWtleS1pbi1wcm9kdWN0aW9u"
 ---
 # Backend API Deployment
 apiVersion: apps/v1
@@ -83,6 +83,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
+              mkdir -p /app
               cat > /app/package.json << 'EOF'
               {
                 "name": "production-api",
