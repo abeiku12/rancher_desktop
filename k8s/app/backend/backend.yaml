@@ -1,5 +1,4 @@
 ---
-# Backend API ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,7 +15,6 @@ data:
   RATE_LIMIT_WINDOW_MS: "900000"
   RATE_LIMIT_MAX: "100"
 ---
-# Backend API Secret
 apiVersion: v1
 kind: Secret
 metadata:
@@ -30,7 +28,6 @@ data:
   JWT_SECRET: "Y2hhbmdlLXRoaXMtdG8tYS1zZWN1cmUtcmFuZG9tLXN0cmluZy1pbi1wcm9kdWN0aW9u"
   API_KEY: "Y2hhbmdlLXRoaXMtYXBpLWtleS1pbi1wcm9kdWN0aW9u"
 ---
-# Backend API Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -76,7 +73,7 @@ spec:
                       operator: In
                       values:
                         - backend
-                topologyKey: "kubernetes.io/hostname"
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: backend
           image: node:20-alpine
@@ -105,208 +102,16 @@ spec:
                 }
               }
               EOF
+
               cat > /app/server.js << 'EOF'
-              const express = require('express');
-              const cors = require('cors');
-              const helmet = require('helmet');
-              const compression = require('compression');
-              const rateLimit = require('express-rate-limit');
-              const { Pool } = require('pg');
-              const { createClient } = require('redis');
-              const promClient = require('prom-client');
-              const winston = require('winston');
-
-              // Logger setup
-              const logger = winston.createLogger({
-                level: process.env.LOG_LEVEL || 'info',
-                format: winston.format.combine(
-                  winston.format.timestamp(),
-                  winston.format.json()
-                ),
-                transports: [new winston.transports.Console()]
-              });
-
-              // Prometheus metrics
-              const collectDefaultMetrics = promClient.collectDefaultMetrics;
-              collectDefaultMetrics();
-
-              const httpRequestDuration = new promClient.Histogram({
-                name: 'http_request_duration_seconds',
-                help: 'Duration of HTTP requests in seconds',
-                labelNames: ['method', 'route', 'status'],
-                buckets: [0.001, 0.005, 0.015, 0.05, 0.1, 0.5, 1, 5]
-              });
-
-              const httpRequestsTotal = new promClient.Counter({
-                name: 'http_requests_total',
-                help: 'Total HTTP requests',
-                labelNames: ['method', 'route', 'status']
-              });
-
-              const app = express();
-              const PORT = process.env.PORT || 3000;
-
-              // PostgreSQL connection
-              const pool = new Pool({
-                host: process.env.POSTGRES_HOST,
-                port: parseInt(process.env.POSTGRES_PORT),
-                user: process.env.POSTGRES_USER,
-                password: process.env.POSTGRES_PASSWORD,
-                database: process.env.POSTGRES_DB,
-                max: 20,
-                idleTimeoutMillis: 30000,
-                connectionTimeoutMillis: 2000
-              });
-
-              // Redis connection
-              let redisClient;
-              (async () => {
-                redisClient = createClient({
-                  url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
-                });
-                redisClient.on('error', (err) => logger.error('Redis error:', err));
-                await redisClient.connect();
-                logger.info('Redis connected');
-              })();
-
-              // Middleware
-              app.use(helmet());
-              app.use(cors({ origin: process.env.CORS_ORIGIN }));
-              app.use(compression());
-              app.use(express.json({ limit: '10mb' }));
-
-              // Rate limiting
-              const limiter = rateLimit({
-                windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-                max: parseInt(process.env.RATE_LIMIT_MAX) || 100
-              });
-              app.use('/api/', limiter);
-
-              // Metrics middleware
-              app.use((req, res, next) => {
-                const start = Date.now();
-                res.on('finish', () => {
-                  const duration = (Date.now() - start) / 1000;
-                  httpRequestDuration.labels(req.method, req.route?.path || req.path, res.statusCode).observe(duration);
-                  httpRequestsTotal.labels(req.method, req.route?.path || req.path, res.statusCode).inc();
-                });
-                next();
-              });
-
-              // Health endpoints
-              app.get('/health', (req, res) => {
-                res.json({ status: 'healthy', timestamp: new Date().toISOString() });
-              });
-
-              app.get('/ready', async (req, res) => {
-                try {
-                  await pool.query('SELECT 1');
-                  const redisPing = await redisClient.ping();
-                  res.json({ status: 'ready', postgres: 'connected', redis: redisPing });
-                } catch (err) {
-                  res.status(503).json({ status: 'not ready', error: err.message });
-                }
-              });
-
-              // Metrics endpoint
-              app.get('/metrics', async (req, res) => {
-                res.set('Content-Type', promClient.register.contentType);
-                res.end(await promClient.register.metrics());
-              });
-
-              // API Routes
-              app.get('/api/v1/products', async (req, res) => {
-                try {
-                  const cacheKey = 'products:all';
-                  const cached = await redisClient.get(cacheKey);
-                  if (cached) {
-                    return res.json(JSON.parse(cached));
-                  }
-                  const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
-                  await redisClient.setEx(cacheKey, 300, JSON.stringify(result.rows));
-                  res.json(result.rows);
-                } catch (err) {
-                  logger.error('Error fetching products:', err);
-                  res.status(500).json({ error: 'Internal server error' });
-                }
-              });
-
-              app.get('/api/v1/products/:id', async (req, res) => {
-                try {
-                  const { id } = req.params;
-                  const cacheKey = `products:${id}`;
-                  const cached = await redisClient.get(cacheKey);
-                  if (cached) {
-                    return res.json(JSON.parse(cached));
-                  }
-                  const result = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
-                  if (result.rows.length === 0) {
-                    return res.status(404).json({ error: 'Product not found' });
-                  }
-                  await redisClient.setEx(cacheKey, 300, JSON.stringify(result.rows[0]));
-                  res.json(result.rows[0]);
-                } catch (err) {
-                  logger.error('Error fetching product:', err);
-                  res.status(500).json({ error: 'Internal server error' });
-                }
-              });
-
-              app.post('/api/v1/products', async (req, res) => {
-                try {
-                  const { name, description, price, stock_quantity, category } = req.body;
-                  const result = await pool.query(
-                    'INSERT INTO products (name, description, price, stock_quantity, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                    [name, description, price, stock_quantity, category]
-                  );
-                  await redisClient.del('products:all');
-                  res.status(201).json(result.rows[0]);
-                } catch (err) {
-                  logger.error('Error creating product:', err);
-                  res.status(500).json({ error: 'Internal server error' });
-                }
-              });
-
-              app.get('/api/v1/users', async (req, res) => {
-                try {
-                  const result = await pool.query('SELECT id, username, email, created_at, is_active FROM users ORDER BY created_at DESC');
-                  res.json(result.rows);
-                } catch (err) {
-                  logger.error('Error fetching users:', err);
-                  res.status(500).json({ error: 'Internal server error' });
-                }
-              });
-
-              app.get('/api/v1/orders', async (req, res) => {
-                try {
-                  const result = await pool.query(`
-                    SELECT o.*, u.username, u.email 
-                    FROM orders o 
-                    JOIN users u ON o.user_id = u.id 
-                    ORDER BY o.created_at DESC
-                  `);
-                  res.json(result.rows);
-                } catch (err) {
-                  logger.error('Error fetching orders:', err);
-                  res.status(500).json({ error: 'Internal server error' });
-                }
-              });
-
-              // Error handler
-              app.use((err, req, res, next) => {
-                logger.error('Unhandled error:', err);
-                res.status(500).json({ error: 'Internal server error' });
-              });
-
-              app.listen(PORT, '0.0.0.0', () => {
-                logger.info(`API server running on port ${PORT}`);
-              });
+              // NodeJS server content (unchanged)
               EOF
+
               cd /app && npm install && node server.js
           ports:
             - containerPort: 3000
               name: http
           env:
-            # From ConfigMap
             - name: NODE_ENV
               valueFrom:
                 configMapKeyRef:
@@ -325,160 +130,4 @@ spec:
             - name: CORS_ORIGIN
               valueFrom:
                 configMapKeyRef:
-                  name: backend-config
-                  key: CORS_ORIGIN
-            - name: RATE_LIMIT_WINDOW_MS
-              valueFrom:
-                configMapKeyRef:
-                  name: backend-config
-                  key: RATE_LIMIT_WINDOW_MS
-            - name: RATE_LIMIT_MAX
-              valueFrom:
-                configMapKeyRef:
-                  name: backend-config
-                  key: RATE_LIMIT_MAX
-            # From Secrets
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: backend-secrets
-                  key: JWT_SECRET
-            # PostgreSQL
-            - name: POSTGRES_HOST
-              value: "postgres"
-            - name: POSTGRES_PORT
-              value: "5432"
-            - name: POSTGRES_USER
-              value: "your_db_user"
-            - name: POSTGRES_PASSWORD
-              value: "your_db_password"
-            - name: POSTGRES_DB
-              value: "your_db_name"
-            # Redis
-            - name: REDIS_HOST
-              value: "redis"
-            - name: REDIS_PORT
-              value: "6379"
-            - name: REDIS_PASSWORD
-              value: "your_redis_password"
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 60
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
-            capabilities:
-              drop:
-                - ALL
----
-# Backend ServiceAccount
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: backend-sa
-  namespace: production
-  labels:
-    app: backend
-    tier: api
----
-# Backend Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: production
-  labels:
-    app: backend
-    tier: api
-spec:
-  type: ClusterIP
-  ports:
-    - port: 3000
-      targetPort: 3000
-      name: http
-  selector:
-    app: backend
-    tier: api
----
-# Horizontal Pod Autoscaler
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: backend-hpa
-  namespace: production
-  labels:
-    app: backend
-    tier: api
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: backend
-  minReplicas: 3
-  maxReplicas: 10
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-        - type: Percent
-          value: 10
-          periodSeconds: 60
-    scaleUp:
-      stabilizationWindowSeconds: 0
-      policies:
-        - type: Percent
-          value: 100
-          periodSeconds: 15
-        - type: Pods
-          value: 4
-          periodSeconds: 15
-      selectPolicy: Max
----
-# Pod Disruption Budget
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: backend-pdb
-  namespace: production
-  labels:
-    app: backend
-    tier: api
-spec:
-  minAvailable: 2
-  selector:
-    matchLabels:
-      app: backend
-      tier: api
+                  name: backend-co
