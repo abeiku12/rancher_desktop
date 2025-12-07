@@ -1,0 +1,605 @@
+---
+# Frontend ConfigMap for Nginx configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for" '
+                        'rt=$request_time uct="$upstream_connect_time" '
+                        'uht="$upstream_header_time" urt="$upstream_response_time"';
+
+        log_format json escape=json '{'
+            '"time_local":"$time_local",'
+            '"remote_addr":"$remote_addr",'
+            '"remote_user":"$remote_user",'
+            '"request":"$request",'
+            '"status": "$status",'
+            '"body_bytes_sent":"$body_bytes_sent",'
+            '"request_time":"$request_time",'
+            '"http_referrer":"$http_referer",'
+            '"http_user_agent":"$http_user_agent"'
+        '}';
+
+        access_log /var/log/nginx/access.log json;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        # Rate limiting
+        limit_req_zone $binary_remote_addr zone=one:10m rate=10r/s;
+        limit_conn_zone $binary_remote_addr zone=addr:10m;
+
+        upstream backend {
+            server backend:3000;
+            keepalive 32;
+        }
+
+        server {
+            listen 80;
+            server_name _;
+            root /usr/share/nginx/html;
+            index index.html;
+
+            # Health check endpoint
+            location /nginx-health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            # Stub status for metrics
+            location /nginx_status {
+                stub_status on;
+                access_log off;
+                allow 127.0.0.1;
+                allow 10.0.0.0/8;
+                deny all;
+            }
+
+            # API proxy
+            location /api/ {
+                limit_req zone=one burst=20 nodelay;
+                proxy_pass http://backend;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_cache_bypass $http_upgrade;
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 60s;
+            }
+
+            # Static files with caching
+            location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+                access_log off;
+            }
+
+            # SPA routing
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+
+            # Error pages
+            error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+                root /usr/share/nginx/html;
+            }
+        }
+    }
+---
+# Frontend HTML Application ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-app
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Production E-Commerce Platform</title>
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <style>
+            .loading { animation: pulse 2s infinite; }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: .5; }
+            }
+            .fade-in { animation: fadeIn 0.3s ease-in; }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 min-h-screen">
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <span class="text-white text-xl font-bold">🛒 E-Commerce Platform</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="#products" class="text-white hover:text-indigo-200">Products</a>
+                        <a href="#users" class="text-white hover:text-indigo-200">Users</a>
+                        <a href="#orders" class="text-white hover:text-indigo-200">Orders</a>
+                        <a href="#health" class="text-white hover:text-indigo-200">Health</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto py-6 px-4">
+            <!-- Health Status -->
+            <section id="health" class="mb-8">
+                <h2 class="text-2xl font-bold mb-4">System Health</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div id="api-health" class="bg-white rounded-lg shadow p-6">
+                        <h3 class="font-semibold text-gray-700">API Status</h3>
+                        <p id="api-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
+                    </div>
+                    <div id="db-health" class="bg-white rounded-lg shadow p-6">
+                        <h3 class="font-semibold text-gray-700">Database</h3>
+                        <p id="db-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
+                    </div>
+                    <div id="cache-health" class="bg-white rounded-lg shadow p-6">
+                        <h3 class="font-semibold text-gray-700">Cache</h3>
+                        <p id="cache-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="products" class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Products</h2>
+                    <button onclick="showAddProduct()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                        + Add Product
+                    </button>
+                </div>
+                <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-lg shadow p-6 loading">Loading products...</div>
+                </div>
+            </section>
+
+            <!-- Users Section -->
+            <section id="users" class="mb-8">
+                <h2 class="text-2xl font-bold mb-4">Users</h2>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table" class="bg-white divide-y divide-gray-200">
+                            <tr><td colspan="5" class="px-6 py-4 text-center loading">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="orders" class="mb-8">
+                <h2 class="text-2xl font-bold mb-4">Orders</h2>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table" class="bg-white divide-y divide-gray-200">
+                            <tr><td colspan="5" class="px-6 py-4 text-center loading">Loading orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Add Product Modal -->
+        <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold mb-4">Add New Product</h3>
+                <form id="product-form" onsubmit="addProduct(event)">
+                    <input type="text" id="prod-name" placeholder="Product Name" required class="w-full mb-3 p-2 border rounded">
+                    <textarea id="prod-desc" placeholder="Description" class="w-full mb-3 p-2 border rounded"></textarea>
+                    <input type="number" id="prod-price" placeholder="Price" step="0.01" required class="w-full mb-3 p-2 border rounded">
+                    <input type="number" id="prod-stock" placeholder="Stock Quantity" required class="w-full mb-3 p-2 border rounded">
+                    <input type="text" id="prod-category" placeholder="Category" class="w-full mb-3 p-2 border rounded">
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="hideModal()" class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <footer class="bg-gray-800 text-white py-4 mt-8">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <p>Production Kubernetes Cluster | Running on Rancher Desktop</p>
+            </div>
+        </footer>
+
+        <script>
+            const API_BASE = '/api/v1';
+
+            async function checkHealth() {
+                try {
+                    const res = await fetch('/api/v1/../ready');
+                    const data = await res.json();
+                    document.getElementById('api-status').textContent = '✅ Online';
+                    document.getElementById('api-status').className = 'text-2xl font-bold text-green-500 fade-in';
+                    document.getElementById('db-status').textContent = data.postgres === 'connected' ? '✅ Connected' : '❌ Disconnected';
+                    document.getElementById('db-status').className = `text-2xl font-bold ${data.postgres === 'connected' ? 'text-green-500' : 'text-red-500'} fade-in`;
+                    document.getElementById('cache-status').textContent = data.redis === 'PONG' ? '✅ Connected' : '❌ Disconnected';
+                    document.getElementById('cache-status').className = `text-2xl font-bold ${data.redis === 'PONG' ? 'text-green-500' : 'text-red-500'} fade-in`;
+                } catch (e) {
+                    document.getElementById('api-status').textContent = '❌ Offline';
+                    document.getElementById('api-status').className = 'text-2xl font-bold text-red-500';
+                }
+            }
+
+            async function loadProducts() {
+                try {
+                    const res = await fetch(`${API_BASE}/products`);
+                    const products = await res.json();
+                    const grid = document.getElementById('products-grid');
+                    if (products.length === 0) {
+                        grid.innerHTML = '<div class="bg-white rounded-lg shadow p-6">No products found</div>';
+                        return;
+                    }
+                    grid.innerHTML = products.map(p => `
+                        <div class="bg-white rounded-lg shadow p-6 fade-in">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-bold text-lg">${p.name}</h3>
+                                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">${p.category || 'Uncategorized'}</span>
+                            </div>
+                            <p class="text-gray-600 mt-2">${p.description || 'No description'}</p>
+                            <div class="mt-4 flex justify-between items-center">
+                                <span class="text-2xl font-bold text-indigo-600">$${parseFloat(p.price).toFixed(2)}</span>
+                                <span class="text-sm text-gray-500">Stock: ${p.stock_quantity}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    document.getElementById('products-grid').innerHTML = '<div class="bg-red-100 text-red-700 rounded-lg p-6">Failed to load products</div>';
+                }
+            }
+
+            async function loadUsers() {
+                try {
+                    const res = await fetch(`${API_BASE}/users`);
+                    const users = await res.json();
+                    const table = document.getElementById('users-table');
+                    if (users.length === 0) {
+                        table.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">No users found</td></tr>';
+                        return;
+                    }
+                    table.innerHTML = users.map(u => `
+                        <tr class="fade-in">
+                            <td class="px-6 py-4 whitespace-nowrap">${u.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">${u.username}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${u.email}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${u.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(u.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    document.getElementById('users-table').innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600">Failed to load users</td></tr>';
+                }
+            }
+
+            async function loadOrders() {
+                try {
+                    const res = await fetch(`${API_BASE}/orders`);
+                    const orders = await res.json();
+                    const table = document.getElementById('orders-table');
+                    if (orders.length === 0) {
+                        table.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">No orders found</td></tr>';
+                        return;
+                    }
+                    table.innerHTML = orders.map(o => `
+                        <tr class="fade-in">
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">#${o.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${o.username} (${o.email})</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-indigo-600 font-bold">$${parseFloat(o.total_amount).toFixed(2)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded ${
+                                    o.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                    o.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }">${o.status}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(o.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    document.getElementById('orders-table').innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600">Failed to load orders</td></tr>';
+                }
+            }
+
+            function showAddProduct() {
+                document.getElementById('modal').classList.remove('hidden');
+                document.getElementById('modal').classList.add('flex');
+            }
+
+            function hideModal() {
+                document.getElementById('modal').classList.add('hidden');
+                document.getElementById('modal').classList.remove('flex');
+            }
+
+            async function addProduct(e) {
+                e.preventDefault();
+                const product = {
+                    name: document.getElementById('prod-name').value,
+                    description: document.getElementById('prod-desc').value,
+                    price: parseFloat(document.getElementById('prod-price').value),
+                    stock_quantity: parseInt(document.getElementById('prod-stock').value),
+                    category: document.getElementById('prod-category').value
+                };
+                try {
+                    await fetch(`${API_BASE}/products`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(product)
+                    });
+                    hideModal();
+                    loadProducts();
+                } catch (e) {
+                    alert('Failed to add product');
+                }
+            }
+
+            // Initial load
+            checkHealth();
+            loadProducts();
+            loadUsers();
+            loadOrders();
+
+            // Refresh health every 30 seconds
+            setInterval(checkHealth, 30000);
+        </script>
+    </body>
+    </html>
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: frontend
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - frontend
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: nginx
+          image: nginx:1.25-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: app-html
+              mountPath: /usr/share/nginx/html
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: pid
+              mountPath: /var/run
+          livenessProbe:
+            httpGet:
+              path: /nginx-health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /nginx-health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+        # Nginx Prometheus Exporter
+        - name: nginx-exporter
+          image: nginx/nginx-prometheus-exporter:0.11.0
+          args:
+            - "-nginx.scrape-uri=http://localhost:80/nginx_status"
+          ports:
+            - containerPort: 9113
+              name: metrics
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: frontend-nginx-config
+        - name: app-html
+          configMap:
+            name: frontend-app
+        - name: cache
+          emptyDir: {}
+        - name: pid
+          emptyDir: {}
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+      name: http
+    - port: 9113
+      targetPort: 9113
+      name: metrics
+  selector:
+    app: frontend
+    tier: web
+---
+# Frontend HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Frontend PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: production
+  labels:
+    app: frontend
+    tier: web
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend
+      tier: web
