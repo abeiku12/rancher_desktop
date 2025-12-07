@@ -158,12 +158,24 @@ spec:
               
               // Redis connection
               const redisClient = redis.createClient({
-                host: process.env.REDIS_HOST || 'redis',
-                port: process.env.REDIS_PORT || 6379,
+                socket: {
+                  host: process.env.REDIS_HOST || 'redis',
+                  port: parseInt(process.env.REDIS_PORT) || 6379
+                },
                 password: process.env.REDIS_PASSWORD || 'RedisP@ssw0rd2024!'
               });
               
               redisClient.on('error', (err) => logger.error('Redis error:', err));
+              
+              // Connect to Redis
+              (async () => {
+                try {
+                  await redisClient.connect();
+                  logger.info('Connected to Redis');
+                } catch (error) {
+                  logger.error('Failed to connect to Redis:', error);
+                }
+              })();
               
               // Middleware
               app.use(helmet());
@@ -190,19 +202,48 @@ spec:
               
               // Health check endpoints
               app.get('/health', async (req, res) => {
+                let healthy = true;
+                let errors = [];
+                
                 try {
                   await pool.query('SELECT 1');
-                  await redisClient.ping();
-                  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
                 } catch (error) {
-                  res.status(500).json({ status: 'unhealthy', error: error.message });
+                  healthy = false;
+                  errors.push(`postgres: ${error.message}`);
+                }
+                
+                try {
+                  if (redisClient.isReady) {
+                    await redisClient.ping();
+                  } else {
+                    errors.push('redis: not connected');
+                    healthy = false;
+                  }
+                } catch (error) {
+                  healthy = false;
+                  errors.push(`redis: ${error.message}`);
+                }
+                
+                if (healthy) {
+                  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+                } else {
+                  res.status(500).json({ status: 'unhealthy', errors, timestamp: new Date().toISOString() });
                 }
               });
               
               app.get('/ready', async (req, res) => {
                 try {
                   const pgResult = await pool.query('SELECT 1');
-                  const redisResult = await redisClient.ping();
+                  let redisResult = 'disconnected';
+                  
+                  try {
+                    if (redisClient.isReady) {
+                      redisResult = await redisClient.ping();
+                    }
+                  } catch (redisError) {
+                    logger.warn('Redis not available for ready check:', redisError.message);
+                  }
+                  
                   res.json({
                     status: 'ready',
                     postgres: pgResult ? 'connected' : 'disconnected',
@@ -270,9 +311,23 @@ spec:
                 }
               });
               
-              app.listen(port, () => {
-                logger.info(`Server running on port ${port}`);
-              });
+              // Graceful startup
+              const startServer = async () => {
+                try {
+                  // Test database connection
+                  await pool.query('SELECT 1');
+                  logger.info('Database connection successful');
+                  
+                  app.listen(port, () => {
+                    logger.info(`Server running on port ${port}`);
+                  });
+                } catch (error) {
+                  logger.error('Failed to start server:', error);
+                  process.exit(1);
+                }
+              };
+              
+              startServer();
               EOF
 
               cd /tmp/app && npm install && node server.js
@@ -352,6 +407,10 @@ spec:
                 secretKeyRef:
                   name: postgres-credentials
                   key: POSTGRES_PORT
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -361,14 +420,16 @@ spec:
             httpGet:
               path: /health
               port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 20
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
 ---
 # Backend Service
 apiVersion: v1
