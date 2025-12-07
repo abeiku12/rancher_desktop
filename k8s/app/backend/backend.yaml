@@ -130,4 +130,4 @@ spec:
             - name: CORS_ORIGIN
               valueFrom:
                 configMapKeyRef:
-                  name: backend-co
+                  name: backend-config
