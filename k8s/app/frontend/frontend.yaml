@@ -148,8 +148,9 @@ data:
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Production E-Commerce Platform</title>
+        <title>TechDirect Pro - Premium Technology & Electronics</title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <style>
             .loading { animation: pulse 2s infinite; }
             @keyframes pulse {
@@ -161,74 +162,264 @@ data:
                 from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #5b21b6 100%); }
+            .product-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+            .product-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+            .category-badge { background: linear-gradient(135deg, #f59e0b, #d97706); }
+            .price-highlight { color: #dc2626; font-weight: 700; }
+            .nav-link { transition: all 0.2s ease; }
+            .nav-link:hover { transform: translateY(-1px); }
+            .hero-section { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); }
+            .search-shadow { box-shadow: 0 4px 14px 0 rgba(0,0,0,0.1); }
         </style>
     </head>
-    <body class="bg-gray-100 min-h-screen">
-        <nav class="bg-indigo-600 shadow-lg">
+    <body class="bg-gray-50 min-h-screen">
+        <!-- Top Bar -->
+        <div class="bg-gray-900 text-white text-sm py-2">
+            <div class="max-w-7xl mx-auto px-4 flex justify-between">
+                <div class="flex space-x-4">
+                    <span><i class="fas fa-phone mr-1"></i>1-800-TECH-PRO</span>
+                    <span><i class="fas fa-truck mr-1"></i>Free Shipping on Orders $50+</span>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="hover:text-gray-300"><i class="fas fa-user mr-1"></i>Account</a>
+                    <a href="#" class="hover:text-gray-300"><i class="fas fa-heart mr-1"></i>Wishlist</a>
+                    <a href="#orders" class="hover:text-gray-300"><i class="fas fa-box mr-1"></i>Orders</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Navigation -->
+        <nav class="bg-white shadow-lg border-b-2 border-blue-600">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between h-16">
+                <div class="flex justify-between h-20">
                     <div class="flex items-center">
-                        <span class="text-white text-xl font-bold">🛒 E-Commerce Platform</span>
+                        <div class="flex-shrink-0">
+                            <span class="text-3xl font-bold gradient-bg bg-clip-text text-transparent">
+                                <i class="fas fa-bolt text-blue-600 mr-2"></i>TechDirect Pro
+                            </span>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <a href="#products" class="text-white hover:text-indigo-200">Products</a>
-                        <a href="#users" class="text-white hover:text-indigo-200">Users</a>
-                        <a href="#orders" class="text-white hover:text-indigo-200">Orders</a>
-                        <a href="#health" class="text-white hover:text-indigo-200">Health</a>
+                    
+                    <!-- Search Bar -->
+                    <div class="flex-1 flex justify-center items-center max-w-lg mx-8">
+                        <div class="w-full relative">
+                            <input type="text" id="searchInput" placeholder="Search for products, brands, categories..." 
+                                   class="w-full px-4 py-3 pl-12 pr-4 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none search-shadow">
+                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <button class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-6">
+                        <a href="#products" class="nav-link text-gray-700 hover:text-blue-600 font-medium">
+                            <i class="fas fa-laptop mr-1"></i>Products
+                        </a>
+                        <a href="#categories" class="nav-link text-gray-700 hover:text-blue-600 font-medium">
+                            <i class="fas fa-th-large mr-1"></i>Categories
+                        </a>
+                        <a href="#deals" class="nav-link text-gray-700 hover:text-blue-600 font-medium">
+                            <i class="fas fa-tags mr-1"></i>Deals
+                        </a>
+                        <a href="#health" class="nav-link text-gray-700 hover:text-blue-600 font-medium">
+                            <i class="fas fa-chart-line mr-1"></i>Admin
+                        </a>
+                        <div class="relative">
+                            <a href="#" class="nav-link text-gray-700 hover:text-blue-600 font-medium">
+                                <i class="fas fa-shopping-cart mr-1"></i>Cart
+                                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </nav>
 
-        <main class="max-w-7xl mx-auto py-6 px-4">
-            <!-- Health Status -->
-            <section id="health" class="mb-8">
-                <h2 class="text-2xl font-bold mb-4">System Health</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div id="api-health" class="bg-white rounded-lg shadow p-6">
-                        <h3 class="font-semibold text-gray-700">API Status</h3>
-                        <p id="api-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
-                    </div>
-                    <div id="db-health" class="bg-white rounded-lg shadow p-6">
-                        <h3 class="font-semibold text-gray-700">Database</h3>
-                        <p id="db-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
-                    </div>
-                    <div id="cache-health" class="bg-white rounded-lg shadow p-6">
-                        <h3 class="font-semibold text-gray-700">Cache</h3>
-                        <p id="cache-status" class="text-2xl font-bold text-gray-400 loading">Checking...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Products Section -->
-            <section id="products" class="mb-8">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold">Products</h2>
-                    <button onclick="showAddProduct()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-                        + Add Product
+        <!-- Hero Section -->
+        <section class="hero-section text-white py-16 mb-8">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <h1 class="text-5xl font-bold mb-4">Premium Technology & Electronics</h1>
+                <p class="text-xl mb-8 opacity-90">Discover the latest in computers, electronics, and tech accessories</p>
+                <div class="flex justify-center space-x-4">
+                    <button class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+                        Shop Now
+                    </button>
+                    <button class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition">
+                        View Deals
                     </button>
                 </div>
-                <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="bg-white rounded-lg shadow p-6 loading">Loading products...</div>
+            </div>
+        </section>
+
+        <main class="max-w-7xl mx-auto py-6 px-4">
+            <!-- Featured Categories -->
+            <section id="categories" class="mb-12">
+                <h2 class="text-3xl font-bold mb-8 text-center text-gray-800">Shop by Category</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-laptop text-4xl text-blue-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Laptops</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-desktop text-4xl text-green-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Desktops</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-mobile-alt text-4xl text-purple-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Mobile</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-headphones text-4xl text-red-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Audio</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-gamepad text-4xl text-indigo-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Gaming</h3>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                        <i class="fas fa-tools text-4xl text-gray-600 mb-3"></i>
+                        <h3 class="font-semibold text-gray-800">Accessories</h3>
+                    </div>
                 </div>
             </section>
 
-            <!-- Users Section -->
-            <section id="users" class="mb-8">
-                <h2 class="text-2xl font-bold mb-4">Users</h2>
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+            <!-- Daily Deals -->
+            <section id="deals" class="mb-12">
+                <div class="bg-gradient-to-r from-red-500 to-pink-500 rounded-xl p-8 text-white">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-3xl font-bold mb-2">Daily Deals</h2>
+                            <p class="text-xl opacity-90">Limited time offers - Don't miss out!</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm opacity-75">Deal ends in:</div>
+                            <div class="text-2xl font-bold" id="countdown">23:59:42</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Health (Admin Section) -->
+            <section id="health" class="mb-8" style="display: none;">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">System Health Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div id="api-health" class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-server text-2xl text-green-500 mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-700">API Status</h3>
+                                <p id="api-status" class="text-lg font-bold text-gray-400 loading">Checking...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="db-health" class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-database text-2xl text-blue-500 mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-700">Database</h3>
+                                <p id="db-status" class="text-lg font-bold text-gray-400 loading">Checking...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="cache-health" class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-memory text-2xl text-orange-500 mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-700">Cache</h3>
+                                <p id="cache-status" class="text-lg font-bold text-gray-400 loading">Checking...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Featured Products -->
+            <section id="products" class="mb-12">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Featured Products</h2>
+                        <p class="text-gray-600 mt-1">Discover our top-rated technology and electronics</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <option>Sort by: Featured</option>
+                            <option>Price: Low to High</option>
+                            <option>Price: High to Low</option>
+                            <option>Customer Rating</option>
+                            <option>Newest First</option>
+                        </select>
+                        <button onclick="showAddProduct()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                            <i class="fas fa-plus mr-2"></i>Add Product
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="bg-white rounded-lg shadow-sm p-4 mb-6 border">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <span class="text-sm font-medium text-gray-700">Filter by:</span>
+                        <button class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition">All Categories</button>
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">Laptops</button>
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">Desktops</button>
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">Mobile</button>
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition">Audio</button>
+                        <div class="ml-auto flex items-center space-x-2">
+                            <i class="fas fa-th-large text-gray-400"></i>
+                            <i class="fas fa-list text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 loading border">
+                        <div class="animate-pulse">
+                            <div class="h-48 bg-gray-200 rounded mb-4"></div>
+                            <div class="h-4 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Section (Admin) -->
+            <section id="users" class="mb-8" style="display: none;">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Customer Management</h2>
+                        <p class="text-gray-600">Manage registered customers and user accounts</p>
+                    </div>
+                    <button class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition font-semibold">
+                        <i class="fas fa-user-plus mr-2"></i>Add User
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border">
+                    <div class="px-6 py-4 border-b bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <input type="text" placeholder="Search users..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Inactive</option>
+                                </select>
+                            </div>
+                            <span class="text-sm text-gray-500">Total: <span class="font-semibold" id="user-count">0</span> users</span>
+                        </div>
+                    </div>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="users-table" class="bg-white divide-y divide-gray-200">
-                            <tr><td colspan="5" class="px-6 py-4 text-center loading">Loading users...</td></tr>
+                            <tr><td colspan="5" class="px-6 py-4 text-center loading text-gray-500">Loading customer data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -236,20 +427,90 @@ data:
 
             <!-- Orders Section -->
             <section id="orders" class="mb-8">
-                <h2 class="text-2xl font-bold mb-4">Orders</h2>
-                <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Order Management</h2>
+                        <p class="text-gray-600">Track and manage customer orders</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                        <button class="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition font-semibold">
+                            <i class="fas fa-plus mr-2"></i>New Order
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Order Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-2xl text-green-500 mr-3"></i>
+                            <div>
+                                <p class="text-sm text-gray-600">Completed</p>
+                                <p class="text-2xl font-bold text-gray-800" id="completed-orders">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-clock text-2xl text-yellow-500 mr-3"></i>
+                            <div>
+                                <p class="text-sm text-gray-600">Pending</p>
+                                <p class="text-2xl font-bold text-gray-800" id="pending-orders">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-truck text-2xl text-blue-500 mr-3"></i>
+                            <div>
+                                <p class="text-sm text-gray-600">Shipped</p>
+                                <p class="text-2xl font-bold text-gray-800" id="shipped-orders">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+                        <div class="flex items-center">
+                            <i class="fas fa-dollar-sign text-2xl text-purple-500 mr-3"></i>
+                            <div>
+                                <p class="text-sm text-gray-600">Total Revenue</p>
+                                <p class="text-2xl font-bold text-gray-800" id="total-revenue">$0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden border">
+                    <div class="px-6 py-4 border-b bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <input type="text" placeholder="Search orders..." class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <select class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option>All Status</option>
+                                    <option>Completed</option>
+                                    <option>Pending</option>
+                                    <option>Shipped</option>
+                                    <option>Cancelled</option>
+                                </select>
+                                <input type="date" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                    </div>
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="orders-table" class="bg-white divide-y divide-gray-200">
-                            <tr><td colspan="5" class="px-6 py-4 text-center loading">Loading orders...</td></tr>
+                            <tr><td colspan="6" class="px-6 py-4 text-center loading text-gray-500">Loading order data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -257,26 +518,158 @@ data:
         </main>
 
         <!-- Add Product Modal -->
-        <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                <h3 class="text-lg font-bold mb-4">Add New Product</h3>
-                <form id="product-form" onsubmit="addProduct(event)">
-                    <input type="text" id="prod-name" placeholder="Product Name" required class="w-full mb-3 p-2 border rounded">
-                    <textarea id="prod-desc" placeholder="Description" class="w-full mb-3 p-2 border rounded"></textarea>
-                    <input type="number" id="prod-price" placeholder="Price" step="0.01" required class="w-full mb-3 p-2 border rounded">
-                    <input type="number" id="prod-stock" placeholder="Stock Quantity" required class="w-full mb-3 p-2 border rounded">
-                    <input type="text" id="prod-category" placeholder="Category" class="w-full mb-3 p-2 border rounded">
-                    <div class="flex justify-end space-x-2">
-                        <button type="button" onclick="hideModal()" class="px-4 py-2 border rounded hover:bg-gray-100">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Add</button>
+        <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-plus-circle text-blue-600 mr-2"></i>Add New Product
+                    </h3>
+                    <button onclick="hideModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="product-form" onsubmit="addProduct(event)" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                            <input type="text" id="prod-name" placeholder="Enter product name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select id="prod-category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition">
+                                <option value="">Select category</option>
+                                <option value="Laptops">Laptops</option>
+                                <option value="Desktops">Desktops</option>
+                                <option value="Mobile">Mobile & Tablets</option>
+                                <option value="Audio">Audio & Headphones</option>
+                                <option value="Gaming">Gaming</option>
+                                <option value="Accessories">Accessories</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="prod-desc" placeholder="Detailed product description..." rows="3"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Price ($) *</label>
+                            <input type="number" id="prod-price" placeholder="0.00" step="0.01" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stock Quantity *</label>
+                            <input type="number" id="prod-stock" placeholder="0" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-gray-700 mb-2">Product Features</h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                            <label class="flex items-center">
+                                <input type="checkbox" class="mr-2"> Free Shipping
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="mr-2"> Featured Product
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="mr-2"> Best Seller
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" class="mr-2"> New Arrival
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-4 pt-6 border-t">
+                        <button type="button" onclick="hideModal()" 
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                            <i class="fas fa-plus mr-2"></i>Add Product
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <footer class="bg-gray-800 text-white py-4 mt-8">
+        <!-- Newsletter Signup -->
+        <section class="bg-blue-600 text-white py-12">
             <div class="max-w-7xl mx-auto px-4 text-center">
-                <p>Production Kubernetes Cluster | Running on Rancher Desktop</p>
+                <h3 class="text-2xl font-bold mb-2">Stay Updated with Latest Tech</h3>
+                <p class="mb-6 opacity-90">Get exclusive deals, new product launches, and tech news delivered to your inbox</p>
+                <div class="flex justify-center max-w-md mx-auto">
+                    <input type="email" placeholder="Enter your email address" class="flex-1 px-4 py-3 rounded-l-lg text-gray-900 focus:outline-none">
+                    <button class="bg-orange-500 text-white px-6 py-3 rounded-r-lg hover:bg-orange-600 transition font-semibold">
+                        Subscribe
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-gray-900 text-white py-12">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 gradient-bg bg-clip-text text-transparent">
+                            <i class="fas fa-bolt text-blue-400 mr-2"></i>TechDirect Pro
+                        </h3>
+                        <p class="text-gray-400 mb-4">Your trusted partner for premium technology and electronics. Quality products, competitive prices, exceptional service.</p>
+                        <div class="flex space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-youtube"></i></a>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Shop</h4>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="#" class="hover:text-white">Laptops & Computers</a></li>
+                            <li><a href="#" class="hover:text-white">Mobile & Tablets</a></li>
+                            <li><a href="#" class="hover:text-white">Audio & Headphones</a></li>
+                            <li><a href="#" class="hover:text-white">Gaming</a></li>
+                            <li><a href="#" class="hover:text-white">Accessories</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Customer Service</h4>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="#" class="hover:text-white">Contact Us</a></li>
+                            <li><a href="#" class="hover:text-white">Shipping Info</a></li>
+                            <li><a href="#" class="hover:text-white">Returns</a></li>
+                            <li><a href="#" class="hover:text-white">Warranty</a></li>
+                            <li><a href="#" class="hover:text-white">FAQ</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Contact Info</h4>
+                        <div class="space-y-2 text-gray-400">
+                            <p><i class="fas fa-phone mr-2"></i>1-800-TECH-PRO</p>
+                            <p><i class="fas fa-envelope mr-2"></i>support@techdirectpro.com</p>
+                            <p><i class="fas fa-clock mr-2"></i>Mon-Fri: 8AM-8PM EST</p>
+                            <p><i class="fas fa-map-marker-alt mr-2"></i>24/7 Online Support</p>
+                        </div>
+                    </div>
+                </div>
+                <hr class="border-gray-700 my-8">
+                <div class="flex flex-col md:flex-row justify-between items-center text-gray-400">
+                    <p>&copy; 2025 TechDirect Pro. All rights reserved. | Production Kubernetes Cluster</p>
+                    <div class="flex space-x-6 mt-4 md:mt-0">
+                        <a href="#" class="hover:text-white">Privacy Policy</a>
+                        <a href="#" class="hover:text-white">Terms of Service</a>
+                        <a href="#" class="hover:text-white">Security</a>
+                    </div>
+                </div>
             </div>
         </footer>
 
@@ -305,24 +698,62 @@ data:
                     const products = await res.json();
                     const grid = document.getElementById('products-grid');
                     if (products.length === 0) {
-                        grid.innerHTML = '<div class="bg-white rounded-lg shadow p-6">No products found</div>';
+                        grid.innerHTML = '<div class="bg-white rounded-xl shadow-md p-6 text-center text-gray-500">No products available at the moment</div>';
                         return;
                     }
                     grid.innerHTML = products.map(p => `
-                        <div class="bg-white rounded-lg shadow p-6 fade-in">
-                            <div class="flex justify-between items-start">
-                                <h3 class="font-bold text-lg">${p.name}</h3>
-                                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">${p.category || 'Uncategorized'}</span>
+                        <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border product-card fade-in">
+                            <div class="relative">
+                                <img src="https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=${encodeURIComponent(p.name.substring(0,10))}" 
+                                     alt="${p.name}" class="w-full h-48 object-cover">
+                                <div class="absolute top-2 right-2">
+                                    <span class="category-badge text-white text-xs px-2 py-1 rounded-full font-semibold">${p.category || 'Tech'}</span>
+                                </div>
+                                ${p.stock_quantity < 5 ? '<div class="absolute top-2 left-2"><span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">Low Stock</span></div>' : ''}
                             </div>
-                            <p class="text-gray-600 mt-2">${p.description || 'No description'}</p>
-                            <div class="mt-4 flex justify-between items-center">
-                                <span class="text-2xl font-bold text-indigo-600">$${parseFloat(p.price).toFixed(2)}</span>
-                                <span class="text-sm text-gray-500">Stock: ${p.stock_quantity}</span>
+                            <div class="p-6">
+                                <h3 class="font-bold text-lg text-gray-800 mb-2 line-clamp-2">${p.name}</h3>
+                                <p class="text-gray-600 text-sm mb-4 line-clamp-3">${p.description || 'Premium quality technology product with advanced features and reliable performance.'}</p>
+                                
+                                <div class="flex items-center mb-3">
+                                    <div class="flex text-yellow-400">
+                                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i>
+                                    </div>
+                                    <span class="text-sm text-gray-500 ml-2">(4.2) 127 reviews</span>
+                                </div>
+                                
+                                <div class="flex justify-between items-center mb-4">
+                                    <div>
+                                        <span class="text-2xl font-bold price-highlight">$${parseFloat(p.price).toFixed(2)}</span>
+                                        <span class="text-sm text-gray-500 line-through ml-2">$${(parseFloat(p.price) * 1.2).toFixed(2)}</span>
+                                    </div>
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-boxes mr-1"></i>${p.stock_quantity} in stock
+                                    </span>
+                                </div>
+                                
+                                <div class="flex space-x-2">
+                                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition font-semibold">
+                                        <i class="fas fa-shopping-cart mr-1"></i>Add to Cart
+                                    </button>
+                                    <button class="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                    <button class="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="mt-3 text-center">
+                                    <span class="text-green-600 text-sm font-medium">
+                                        <i class="fas fa-truck mr-1"></i>Free shipping on orders over $50
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     `).join('');
                 } catch (e) {
-                    document.getElementById('products-grid').innerHTML = '<div class="bg-red-100 text-red-700 rounded-lg p-6">Failed to load products</div>';
+                    document.getElementById('products-grid').innerHTML = '<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 text-center"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load products</div>';
                 }
             }
 
@@ -331,25 +762,56 @@ data:
                     const res = await fetch(`${API_BASE}/users`);
                     const users = await res.json();
                     const table = document.getElementById('users-table');
+                    document.getElementById('user-count').textContent = users.length;
+                    
                     if (users.length === 0) {
-                        table.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">No users found</td></tr>';
+                        table.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500"><i class="fas fa-users text-4xl mb-2"></i><br>No customers found</td></tr>';
                         return;
                     }
                     table.innerHTML = users.map(u => `
-                        <tr class="fade-in">
-                            <td class="px-6 py-4 whitespace-nowrap">${u.id}</td>
-                            <td class="px-6 py-4 whitespace-nowrap font-medium">${u.username}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${u.email}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs rounded ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        <tr class="fade-in hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold mr-3">
+                                        ${u.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">${u.username}</div>
+                                        <div class="text-sm text-gray-500">ID: ${u.id}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-gray-900">${u.email}</div>
+                                <div class="text-sm text-gray-500"><i class="fas fa-envelope mr-1"></i>Email verified</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    <i class="fas ${u.is_active ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i>
                                     ${u.is_active ? 'Active' : 'Inactive'}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div>${new Date(u.created_at).toLocaleDateString()}</div>
+                                <div class="text-xs text-gray-400">${new Date(u.created_at).toLocaleTimeString()}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                <div class="flex space-x-2">
+                                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-800 font-medium">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-800 font-medium">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     `).join('');
                 } catch (e) {
-                    document.getElementById('users-table').innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600">Failed to load users</td></tr>';
+                    document.getElementById('users-table').innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load customer data</td></tr>';
                 }
             }
 
@@ -358,27 +820,76 @@ data:
                     const res = await fetch(`${API_BASE}/orders`);
                     const orders = await res.json();
                     const table = document.getElementById('orders-table');
+                    
+                    // Update stats
+                    const completed = orders.filter(o => o.status === 'completed').length;
+                    const pending = orders.filter(o => o.status === 'pending').length;
+                    const shipped = orders.filter(o => o.status === 'shipped').length;
+                    const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+                    
+                    document.getElementById('completed-orders').textContent = completed;
+                    document.getElementById('pending-orders').textContent = pending;
+                    document.getElementById('shipped-orders').textContent = shipped;
+                    document.getElementById('total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
+                    
                     if (orders.length === 0) {
-                        table.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">No orders found</td></tr>';
+                        table.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500"><i class="fas fa-shopping-bag text-4xl mb-2"></i><br>No orders found</td></tr>';
                         return;
                     }
+                    
                     table.innerHTML = orders.map(o => `
-                        <tr class="fade-in">
-                            <td class="px-6 py-4 whitespace-nowrap font-medium">#${o.id}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${o.username} (${o.email})</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-indigo-600 font-bold">$${parseFloat(o.total_amount).toFixed(2)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs rounded ${
+                        <tr class="fade-in hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">#${o.id}</div>
+                                <div class="text-sm text-gray-500">${o.items || 'N/A'} items</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">${o.username}</div>
+                                <div class="text-sm text-gray-500">${o.email}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-lg font-bold text-green-600">$${parseFloat(o.total_amount).toFixed(2)}</div>
+                                <div class="text-sm text-gray-500">+ tax & shipping</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
                                     o.status === 'completed' ? 'bg-green-100 text-green-800' :
                                     o.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    o.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                                    o.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                     'bg-gray-100 text-gray-800'
-                                }">${o.status}</span>
+                                }">
+                                    <i class="fas ${
+                                        o.status === 'completed' ? 'fa-check-circle' :
+                                        o.status === 'pending' ? 'fa-clock' :
+                                        o.status === 'shipped' ? 'fa-truck' :
+                                        o.status === 'cancelled' ? 'fa-times-circle' :
+                                        'fa-circle'
+                                    } mr-1"></i>
+                                    ${o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                                </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(o.created_at).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <div>${new Date(o.created_at).toLocaleDateString()}</div>
+                                <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleTimeString()}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm">
+                                <div class="flex space-x-2">
+                                    <button class="text-blue-600 hover:text-blue-800 font-medium" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-800 font-medium" title="Process">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <button class="text-purple-600 hover:text-purple-800 font-medium" title="Print">
+                                        <i class="fas fa-print"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     `).join('');
                 } catch (e) {
-                    document.getElementById('orders-table').innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-600">Failed to load orders</td></tr>';
+                    document.getElementById('orders-table').innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load order data</td></tr>';
                 }
             }
 
@@ -414,14 +925,84 @@ data:
                 }
             }
 
+            // Navigation and UI functions
+            function toggleAdminView() {
+                const healthSection = document.getElementById('health');
+                const usersSection = document.getElementById('users');
+                
+                if (healthSection.style.display === 'none') {
+                    healthSection.style.display = 'block';
+                    usersSection.style.display = 'block';
+                } else {
+                    healthSection.style.display = 'none';
+                    usersSection.style.display = 'none';
+                }
+            }
+
+            // Countdown timer for deals
+            function updateCountdown() {
+                const now = new Date();
+                const tomorrow = new Date(now);
+                tomorrow.setDate(now.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+                
+                const diff = tomorrow - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdown').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const productCards = document.querySelectorAll('.product-card');
+                
+                productCards.forEach(card => {
+                    const productName = card.querySelector('h3').textContent.toLowerCase();
+                    const productDesc = card.querySelector('p').textContent.toLowerCase();
+                    
+                    if (productName.includes(searchTerm) || productDesc.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+
+            // Admin navigation
+            document.querySelector('a[href="#health"]').addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleAdminView();
+            });
+
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
             // Initial load
             checkHealth();
             loadProducts();
             loadUsers();
             loadOrders();
+            updateCountdown();
 
             // Refresh health every 30 seconds
             setInterval(checkHealth, 30000);
+            // Update countdown every second
+            setInterval(updateCountdown, 1000);
         </script>
     </body>
     </html>
